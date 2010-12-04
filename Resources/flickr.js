@@ -1,3 +1,19 @@
+/*
+ *  File: flickr.js
+ *
+ *  Description:
+ *      Get photos from flickr.com via API
+ *      Set scrollView and rearView on baseView
+ *      Set search_box on mainWin
+ *
+ *  Created: 2010/12/2
+ *
+ *  Author: Daisuke Kobayashi  poleon.kd@gmail.com
+ *
+ *  Revision History:
+ *      2010/12/2    Created
+ *
+ */
 mainWin = Ti.UI.currentWindow;
 
 var Flickr = {
@@ -6,7 +22,7 @@ var Flickr = {
     },
     
     wait : function(a, func){
-	Flickr.log(a.length);
+	//Flickr.log(a.length);
 	if(a.length > 0){
 	    Flickr.log('done getting photos...');
 	    func();
@@ -31,7 +47,7 @@ var Flickr = {
 	loader.onload = function(){
 	    var re = this.responseText;
 	    var data = JSON.parse(re).photos.photo;
-	    for(var i = 0; i < 50; i++){
+	    for(var i = 0; i < 20; i++){
 		id = data[i].id;
 		secret = data[i].secret;
 		farm = data[i].farm;
@@ -48,7 +64,6 @@ var Flickr = {
     },
 
     photoView : function(photos){
-	Flickr.log(1);
 	var baseView = Ti.UI.createView({
     	});
 	var scrollView = null;
@@ -72,11 +87,12 @@ var Flickr = {
 	topbar.add(search_box);
 	mainWin.add(topbar);
 
-	Flickr.log(2);
 	Flickr.wait(photos, function(){
-	    Flickr.log(3);
 	    rearView = Ti.UI.createView({
 		backgroundColor:'black',
+		top:0,
+		bottom:0,
+		visible:false
 	    });
 	    baseView.add(rearView);
 
@@ -87,25 +103,30 @@ var Flickr = {
 	    });
 	    baseView.add(scrollView);
 
-	    Flickr.log(4);
+	    var t = 0, l = 0;
 	    for(var i = 0; i < photos.length; i++){
 		views[i] = Ti.UI.createImageView({
 		    image:photos[i],
 		    backgroundColor:'#000'
 		});
 		scrollView.addView(views[i]);
-		
+
+		if(i > 0 && i % 4 === 0){
+		    t += 256;
+		    l = 0;
+		}
 		smallviews[i] = Ti.UI.createImageView({
 		    image:photos[i],
 		    backgroundColor:'#000',
-		    width:153,
-		    left:0 + 153 * i,
-		    top:-30
+		    width:190,
+		    height:256,
+		    left:192 * l++,
+		    top:t
 		});
 		rearView.add(smallviews[i]);
 		
 	    }
-	    Flickr.log(5);
+
 	    scrollView.addEventListener('singletap', function(e){
 		Flickr.log('singletap x:' + e.x + ', y:' + e.y);
 		if(!topbar_visible){
@@ -124,43 +145,50 @@ var Flickr = {
 		}
 	    });
 
-	    Flickr.log(6);
-
 	    rearView.addEventListener('doubletap', function(e){
 		Flickr.log('doubletap in rearView');
 		baseView.animate({view:scrollView,transition:Ti.UI.iPhone.AnimationStyle.FLIP_FROM_RIGHT});
+		rearView.visible = false;
+		scrollView.visible = true;
 	    });
 	    
 	    scrollView.addEventListener('doubletap', function(e){
 		Flickr.log('doubletap in scrollView');
 		baseView.animate({view:rearView,transition:Ti.UI.iPhone.AnimationStyle.FLIP_FROM_RIGHT});
+		scrollView.visible = false;
+		rearView.visible = true;
 	    });
 	    
-	    Flickr.log(7);
 	    mainWin.add(baseView);
 
 	    search_box.addEventListener('return', function(e){
-		Flickr.log(e.value);
 		topbar_visible = false;
 		topbar.animate({top:-50,curve:Ti.UI.ANIMATION_CURVE_EASE_IN_OUT,duration:500});
 		search_box.blur();
+		
 		photos = [];
 		photos = Flickr.getPhotos(e.value);
 		scrollView.views = [];
 		rearView.views = [];
-		baseView.remove(rearView);
-		baseView.remove(scrollView);
+		//baseView.remove(rearView);
+		//baseView.remove(scrollView);
 		smallviews = [];
 		views = [];
 		
 		Flickr.wait(photos, function(){
+		    t = l = 0;
 		    for(var i = 0; i < photos.length; i++){
+			if(i > 0 && i % 4 === 0){
+			    t += 256;
+			    l = 0;
+			}
 			smallviews[i] = Ti.UI.createImageView({
 			    image:photos[i],
 			    backgroundColor:'#000',
-			    width:153,
-			    left:0 + 153 * i,
-			    top:-30
+			    width:190,
+			    height:256,
+			    left:192 * l++,
+			    top:t
 			});
 			rearView.add(smallviews[i]);
 			
@@ -179,11 +207,10 @@ var Flickr = {
 		
 	    });
 	    
-	    Flickr.log(8);
 	});
     },
 };
 
-var result = Flickr.getPhotos('shibuya');
+var result = Flickr.getPhotos('iPad');
 Flickr.photoView(result);
 mainWin.open();
